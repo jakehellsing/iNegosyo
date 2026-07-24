@@ -52,7 +52,7 @@ export default function CustomersPage() {
           placeholder="Search customers"
           className="pl-9"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onValueChange={(v) => setQuery(v)}
         />
       </div>
 

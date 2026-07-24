@@ -47,7 +47,7 @@ export default function SignupPage() {
                   type="email"
                   placeholder="you@example.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onValueChange={(v) => setEmail(v)}
                   required
                 />
               </div>
@@ -58,7 +58,7 @@ export default function SignupPage() {
                   type="password"
                   placeholder="••••••••"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onValueChange={(v) => setPassword(v)}
                   required
                   minLength={6}
                 />

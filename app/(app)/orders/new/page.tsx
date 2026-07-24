@@ -96,7 +96,7 @@ export default function NewOrderPage() {
               <Input
                 id="product"
                 value={product}
-                onChange={(e) => setProduct(e.target.value)}
+                onValueChange={(v) => setProduct(v)}
                 placeholder="e.g. Ube Halaya Jar"
                 required
               />
@@ -110,7 +110,7 @@ export default function NewOrderPage() {
                   type="number"
                   min={1}
                   value={quantity}
-                  onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
+                  onValueChange={(v) => setQuantity(Math.max(1, Number(v)))}
                   required
                 />
               </div>
@@ -122,7 +122,7 @@ export default function NewOrderPage() {
                   min={0}
                   step="0.01"
                   value={unitPrice}
-                  onChange={(e) => setUnitPrice(Number(e.target.value))}
+                  onValueChange={(v) => setUnitPrice(Number(v))}
                   required
                 />
               </div>
@@ -187,7 +187,7 @@ export default function NewOrderPage() {
                 id="notes"
                 placeholder="Special instructions"
                 value={notes}
-                onChange={(e) => setNotes(e.target.value)}
+                onValueChange={(v) => setNotes(v)}
               />
             </div>
           </CardContent>

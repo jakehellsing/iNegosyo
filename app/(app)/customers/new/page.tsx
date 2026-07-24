@@ -15,17 +15,23 @@ export default function NewCustomerPage() {
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     if (!name.trim()) return;
-    await addCustomer({
-      name: name.trim(),
-      phone_number: phone.trim() || undefined,
-      address: address.trim() || undefined,
-      notes: notes.trim() || undefined,
-    });
-    router.push("/customers");
+    try {
+      await addCustomer({
+        name: name.trim(),
+        phone_number: phone.trim() || undefined,
+        address: address.trim() || undefined,
+        notes: notes.trim() || undefined,
+      });
+      router.push("/customers");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
   };
 
   return (
@@ -49,7 +55,7 @@ export default function NewCustomerPage() {
                 id="name"
                 placeholder="Juan dela Cruz"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onValueChange={(v) => setName(v)}
                 required
               />
             </div>
@@ -59,7 +65,7 @@ export default function NewCustomerPage() {
                 id="phone"
                 placeholder="09171234567"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onValueChange={(v) => setPhone(v)}
               />
             </div>
             <div className="space-y-2">
@@ -68,7 +74,7 @@ export default function NewCustomerPage() {
                 id="address"
                 placeholder="Manila, Philippines"
                 value={address}
-                onChange={(e) => setAddress(e.target.value)}
+                onValueChange={(v) => setAddress(v)}
               />
             </div>
             <div className="space-y-2">
@@ -77,12 +83,13 @@ export default function NewCustomerPage() {
                 id="notes"
                 placeholder="Preferences, reminders, etc."
                 value={notes}
-                onChange={(e) => setNotes(e.target.value)}
+                onValueChange={(v) => setNotes(v)}
               />
             </div>
           </CardContent>
         </Card>
 
+        {error && <p className="text-sm text-destructive">{error}</p>}
         <Button type="submit" className="w-full gap-2">
           <Save className="h-4 w-4" />
           Save Customer

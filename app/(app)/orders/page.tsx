@@ -103,7 +103,7 @@ export default function OrdersPage() {
           placeholder="Search customer or product"
           className="pl-9"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onValueChange={(v) => setQuery(v)}
         />
       </div>
 
