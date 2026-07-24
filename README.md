@@ -4,8 +4,8 @@ A mobile-first order, customer, and payment tracker for small home-based PH busi
 
 ## Tech Stack
 
-- **Framework:** Next.js 15 + TypeScript
-- **Styling:** Tailwind CSS + shadcn/ui
+- **Framework:** Next.js 15 (App Router) + TypeScript
+- **Styling:** Tailwind CSS + shadcn/ui + Base UI
 - **Backend:** Supabase (Auth + PostgreSQL)
 - **Hosting:** Vercel
 
@@ -15,15 +15,15 @@ A mobile-first order, customer, and payment tracker for small home-based PH busi
 app/
   (app)/           Protected app shell (dashboard, orders, customers, payments)
   (auth)/          Login and sign-up screens
-  globals.css      Tailwind / shadcn theme
+globals.css        Tailwind / shadcn theme
   layout.tsx       Root layout + providers
 components/
   ui/              shadcn/ui components
   layout/          App header and mobile navigation
 lib/
-  auth/            Auth context (localStorage mock for quick scaffolding)
-  supabase/        Supabase browser, server, and middleware clients
-  store.ts         Local-first data store (replaces with Supabase later)
+  auth/            Supabase-backed auth context
+  supabase/        Browser, server, and middleware clients
+  store.ts         Async data layer over Supabase
   types.ts         Shared TypeScript types
   utils.ts         Tailwind cn + peso formatter
 supabase/
@@ -33,7 +33,7 @@ supabase/
 
 ## Getting Started
 
-1. Copy the environment template:
+1. Copy the environment template and fill in your Supabase credentials:
 
    ```bash
    cp .env.example .env.local
@@ -45,7 +45,13 @@ supabase/
    npm install
    ```
 
-3. Run the development server:
+3. Apply the Supabase migration before running the app:
+
+   - Open your Supabase project → **SQL Editor**
+   - Paste the contents of `supabase/migrations/001_initial_schema.sql`
+   - Click **Run**
+
+4. Run the development server:
 
    ```bash
    npm run dev
@@ -53,14 +59,23 @@ supabase/
 
    Open [http://localhost:3000](http://localhost:3000).
 
-4. Log in or sign up with any email address. The app uses localStorage for fast local scaffolding and seeds sample data.
+5. Sign up with an email and password, then log in.
 
-## Supabase Setup
+## Multi-Tenancy
 
-1. Create a project on [Supabase](https://supabase.com).
-2. Add the **URL** and **Anon Key** to `.env.local`.
-3. Run the migration in `supabase/migrations/001_initial_schema.sql` from the Supabase SQL Editor.
-4. Update `lib/store.ts` / `lib/auth/context.tsx` to use Supabase instead of localStorage when ready.
+Each user signs up with a unique email. `customers` and `orders` rows are scoped to `user_id` and protected by Row Level Security (RLS) so users can only access their own records.
+
+## Future: Multi-User / Organization Support
+
+For larger sellers who need staff accounts or shared business data:
+
+- Add an `organizations` table.
+- Add `organization_members(user_id, organization_id, role)` with roles such as `owner`, `staff`, `cashier`.
+- Replace `user_id` on `customers` and `orders` with `organization_id`.
+- Update RLS policies to check `organization_id` via `organization_members`.
+- Add owner-managed invites (email or invite code) in the app UI.
+
+This is not scaffolded yet and should be added when the business needs shared access.
 
 ## Deployment
 
@@ -68,7 +83,7 @@ supabase/
 vercel
 ```
 
-Set the environment variables in the Vercel dashboard before deploying.
+Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in the Vercel dashboard before deploying.
 
 ## Scripts
 
