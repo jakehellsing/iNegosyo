@@ -30,7 +30,13 @@ export default function NewCustomerPage() {
       });
       router.push("/customers");
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      const message =
+        e && typeof e === "object" && "message" in e
+          ? String(e.message)
+          : e instanceof Error
+            ? e.message
+            : String(e);
+      setError(message);
     }
   };
 

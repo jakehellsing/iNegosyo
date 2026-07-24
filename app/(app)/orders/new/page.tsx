@@ -28,6 +28,7 @@ export default function NewOrderPage() {
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>("PICKUP");
   const [orderStatus, setOrderStatus] = useState<OrderStatus>("PENDING");
   const [notes, setNotes] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     getCustomers().then((c) => {
@@ -40,18 +41,29 @@ export default function NewOrderPage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     if (!customerId || !product.trim()) return;
-    await addOrder({
-      customer_id: customerId,
-      product_name: product.trim(),
-      quantity,
-      unit_price: unitPrice,
-      payment_status: paymentStatus,
-      delivery_method: deliveryMethod,
-      order_status: orderStatus,
-      notes: notes.trim() || undefined,
-    });
-    router.push("/orders");
+    try {
+      await addOrder({
+        customer_id: customerId,
+        product_name: product.trim(),
+        quantity,
+        unit_price: unitPrice,
+        payment_status: paymentStatus,
+        delivery_method: deliveryMethod,
+        order_status: orderStatus,
+        notes: notes.trim() || undefined,
+      });
+      router.push("/orders");
+    } catch (e) {
+      const message =
+        e && typeof e === "object" && "message" in e
+          ? String(e.message)
+          : e instanceof Error
+            ? e.message
+            : String(e);
+      setError(message);
+    }
   };
 
   return (
@@ -193,6 +205,7 @@ export default function NewOrderPage() {
           </CardContent>
         </Card>
 
+        {error && <p className="text-sm text-destructive">{error}</p>}
         <Button type="submit" className="w-full gap-2" disabled={!customerId}>
           <Save className="h-4 w-4" />
           Save Order
