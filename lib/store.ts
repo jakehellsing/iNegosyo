@@ -1,160 +1,135 @@
-"use client";
-
+import { createClient } from "@/lib/supabase/client";
 import { Customer, DeliveryMethod, Order, OrderStatus, PaymentStatus } from "./types";
 
-const CUSTOMERS_KEY = "inegosyo_customers";
-const ORDERS_KEY = "inegosyo_orders";
+const supabase = createClient();
 
-function isBrowser() {
-  return typeof window !== "undefined";
+async function currentUser() {
+  const { data } = await supabase.auth.getUser();
+  return data.user;
 }
 
-function uid() {
-  if (isBrowser() && typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+export async function getCustomers(): Promise<Customer[]> {
+  const user = await currentUser();
+  if (!user) return [];
+  const { data, error } = await supabase
+    .from("customers")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data as Customer[]) ?? [];
 }
 
-function now() {
-  return new Date().toISOString();
+export async function getCustomer(id: string): Promise<Customer | undefined> {
+  const user = await currentUser();
+  if (!user) return undefined;
+  const { data, error } = await supabase
+    .from("customers")
+    .select("*")
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .single();
+  if (error) return undefined;
+  return data as Customer;
 }
 
-function read<T>(key: string): T[] {
-  if (!isBrowser()) return [];
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T[]) : [];
-  } catch {
-    return [];
-  }
+export async function addCustomer(
+  data: Omit<Customer, "id" | "user_id" | "created_at" | "updated_at">
+): Promise<Customer> {
+  const user = await currentUser();
+  if (!user) throw new Error("Not authenticated");
+  const { data: row, error } = await supabase
+    .from("customers")
+    .insert({ ...data, user_id: user.id })
+    .select()
+    .single();
+  if (error) throw error;
+  return row as Customer;
 }
 
-function write<T>(key: string, value: T[]) {
-  if (!isBrowser()) return;
-  localStorage.setItem(key, JSON.stringify(value));
+export async function updateCustomer(id: string, data: Partial<Customer>): Promise<Customer | undefined> {
+  const user = await currentUser();
+  if (!user) return undefined;
+  const { data: row, error } = await supabase
+    .from("customers")
+    .update(data)
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .select()
+    .single();
+  if (error) return undefined;
+  return row as Customer;
 }
 
-// Seed sample data for a first-time user.
-export function seedData(userId: string) {
-  if (!isBrowser()) return;
-  if (localStorage.getItem(CUSTOMERS_KEY) || localStorage.getItem(ORDERS_KEY)) return;
-
-  const customer: Customer = {
-    id: uid(),
-    user_id: userId,
-    name: "Sample Customer",
-    phone_number: "09171234567",
-    address: "Manila, Philippines",
-    notes: "Loves ube halaya",
-    created_at: now(),
-    updated_at: now(),
-  };
-
-  const order: Order = {
-    id: uid(),
-    user_id: userId,
-    customer_id: customer.id,
-    product_name: "Ube Halaya Jar",
-    quantity: 2,
-    unit_price: 250,
-    total_amount: 500,
-    payment_status: "UNPAID",
-    delivery_method: "PICKUP",
-    order_status: "PENDING",
-    notes: "Please message before pick-up.",
-    created_at: now(),
-    updated_at: now(),
-  };
-
-  write<Customer>(CUSTOMERS_KEY, [customer]);
-  write<Order>(ORDERS_KEY, [order]);
+export async function deleteCustomer(id: string): Promise<boolean> {
+  const user = await currentUser();
+  if (!user) return false;
+  const { error } = await supabase.from("customers").delete().eq("id", id).eq("user_id", user.id);
+  return !error;
 }
 
-export function getCustomers(userId: string): Customer[] {
-  return read<Customer>(CUSTOMERS_KEY).filter((c) => c.user_id === userId);
+export async function getOrders(): Promise<Order[]> {
+  const user = await currentUser();
+  if (!user) return [];
+  const { data, error } = await supabase
+    .from("orders")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data as Order[]) ?? [];
 }
 
-export function getCustomer(userId: string, id: string): Customer | undefined {
-  return getCustomers(userId).find((c) => c.id === id);
+export async function getOrder(id: string): Promise<Order | undefined> {
+  const user = await currentUser();
+  if (!user) return undefined;
+  const { data, error } = await supabase
+    .from("orders")
+    .select("*")
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .single();
+  if (error) return undefined;
+  return data as Order;
 }
 
-export function addCustomer(userId: string, data: Omit<Customer, "id" | "user_id" | "created_at" | "updated_at">): Customer {
-  const customer: Customer = { ...data, id: uid(), user_id: userId, created_at: now(), updated_at: now() };
-  const all = read<Customer>(CUSTOMERS_KEY);
-  all.push(customer);
-  write(CUSTOMERS_KEY, all);
-  return customer;
-}
-
-export function updateCustomer(userId: string, id: string, data: Partial<Customer>): Customer | undefined {
-  const all = read<Customer>(CUSTOMERS_KEY);
-  const idx = all.findIndex((c) => c.id === id && c.user_id === userId);
-  if (idx === -1) return undefined;
-  all[idx] = { ...all[idx], ...data, updated_at: now() };
-  write(CUSTOMERS_KEY, all);
-  return all[idx];
-}
-
-export function deleteCustomer(userId: string, id: string): boolean {
-  const all = read<Customer>(CUSTOMERS_KEY);
-  const filtered = all.filter((c) => !(c.id === id && c.user_id === userId));
-  if (filtered.length === all.length) return false;
-  write(CUSTOMERS_KEY, filtered);
-  return true;
-}
-
-export function getOrders(userId: string): Order[] {
-  return read<Order>(ORDERS_KEY)
-    .filter((o) => o.user_id === userId)
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-}
-
-export function getOrder(userId: string, id: string): Order | undefined {
-  return getOrders(userId).find((o) => o.id === id);
-}
-
-export function addOrder(
-  userId: string,
+export async function addOrder(
   data: Omit<Order, "id" | "user_id" | "total_amount" | "created_at" | "updated_at">
-): Order {
-  const order: Order = {
-    ...data,
-    total_amount: data.quantity * data.unit_price,
-    id: uid(),
-    user_id: userId,
-    created_at: now(),
-    updated_at: now(),
-  };
-  const all = read<Order>(ORDERS_KEY);
-  all.push(order);
-  write(ORDERS_KEY, all);
-  return order;
+): Promise<Order> {
+  const user = await currentUser();
+  if (!user) throw new Error("Not authenticated");
+  const { data: row, error } = await supabase
+    .from("orders")
+    .insert({ ...data, user_id: user.id })
+    .select()
+    .single();
+  if (error) throw error;
+  return row as Order;
 }
 
-export function updateOrder(userId: string, id: string, data: Partial<Order>): Order | undefined {
-  const all = read<Order>(ORDERS_KEY);
-  const idx = all.findIndex((o) => o.id === id && o.user_id === userId);
-  if (idx === -1) return undefined;
-  const updated = { ...all[idx], ...data, updated_at: now() };
-  if (data.quantity !== undefined || data.unit_price !== undefined) {
-    updated.total_amount = updated.quantity * updated.unit_price;
-  }
-  all[idx] = updated;
-  write(ORDERS_KEY, all);
-  return updated;
+export async function updateOrder(id: string, data: Partial<Order>): Promise<Order | undefined> {
+  const user = await currentUser();
+  if (!user) return undefined;
+  const { data: row, error } = await supabase
+    .from("orders")
+    .update(data)
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .select()
+    .single();
+  if (error) return undefined;
+  return row as Order;
 }
 
-export function deleteOrder(userId: string, id: string): boolean {
-  const all = read<Order>(ORDERS_KEY);
-  const filtered = all.filter((o) => !(o.id === id && o.user_id === userId));
-  if (filtered.length === all.length) return false;
-  write(ORDERS_KEY, filtered);
-  return true;
+export async function deleteOrder(id: string): Promise<boolean> {
+  const user = await currentUser();
+  if (!user) return false;
+  const { error } = await supabase.from("orders").delete().eq("id", id).eq("user_id", user.id);
+  return !error;
 }
 
-export function getDashboardStats(userId: string) {
-  const orders = getOrders(userId);
+export async function getDashboardStats() {
+  const orders = await getOrders();
   const today = new Date().toISOString().slice(0, 10);
   const ordersToday = orders.filter((o) => o.created_at.startsWith(today));
   const pendingOrders = orders.filter((o) => o.order_status === "PENDING");
@@ -172,19 +147,24 @@ export function getDashboardStats(userId: string) {
   };
 }
 
-export function getReceivables(userId: string, filter?: PaymentStatus | "ALL") {
-  let orders = getOrders(userId).filter((o) => o.payment_status !== "PAID" && o.order_status !== "CANCELLED");
+export async function getReceivables(filter?: PaymentStatus | "ALL") {
+  const user = await currentUser();
+  if (!user) return [];
+  let query = supabase
+    .from("orders")
+    .select("*, customers(name)")
+    .eq("user_id", user.id)
+    .neq("payment_status", "PAID");
   if (filter && filter !== "ALL") {
-    orders = orders.filter((o) => o.payment_status === filter);
+    query = query.eq("payment_status", filter);
   }
-  return orders.map((o) => {
-    const customer = getCustomer(userId, o.customer_id);
-    return {
-      ...o,
-      customer_name: customer?.name ?? "Unknown",
-      remaining: o.total_amount,
-    };
-  });
+  const { data, error } = await query.order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map((row: Order & { customers?: { name: string } | null }) => ({
+    ...row,
+    customer_name: row.customers?.name ?? "Unknown",
+    remaining: row.total_amount,
+  }));
 }
 
 export const paymentStatusLabels: Record<PaymentStatus, string> = {

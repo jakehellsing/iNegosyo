@@ -1,47 +1,35 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/lib/auth/context";
-import { getCustomers, getOrders, paymentStatusLabels } from "@/lib/store";
-import { Customer, Order, PaymentStatus } from "@/lib/types";
+import { getReceivables, paymentStatusLabels } from "@/lib/store";
+import { PaymentStatus } from "@/lib/types";
 import { formatPeso } from "@/lib/utils";
 
+interface Receivable {
+  id: string;
+  product_name: string;
+  payment_status: PaymentStatus;
+  total_amount: number;
+  customer_name: string;
+  remaining: number;
+}
+
 export default function PaymentsPage() {
-  const { user } = useAuth();
   const [filter, setFilter] = useState<PaymentStatus | "ALL">("ALL");
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [receivables, setReceivables] = useState<Receivable[]>([]);
+  const [summary, setSummary] = useState({ unpaid: 0, partial: 0, total: 0 });
 
   useEffect(() => {
-    if (!user) return;
-    setOrders(getOrders(user.id));
-    setCustomers(getCustomers(user.id));
-  }, [user]);
-
-  const customerMap = useMemo(() => {
-    return Object.fromEntries(customers.map((c) => [c.id, c]));
-  }, [customers]);
-
-  const summary = useMemo(() => {
-    const unpaid = orders.filter((o) => o.payment_status === "UNPAID");
-    const partial = orders.filter((o) => o.payment_status === "PARTIAL");
-    const total = orders
-      .filter((o) => o.payment_status !== "PAID")
-      .reduce((sum, o) => sum + o.total_amount, 0);
-    return { unpaid: unpaid.length, partial: partial.length, total };
-  }, [orders]);
-
-  const receivables = useMemo(() => {
-    let list = orders.filter((o) => o.payment_status !== "PAID");
-    if (filter !== "ALL") list = list.filter((o) => o.payment_status === filter);
-    return list.map((o) => ({
-      ...o,
-      customer_name: customerMap[o.customer_id]?.name ?? "Unknown",
-      remaining: o.total_amount,
-    }));
-  }, [orders, filter, customerMap]);
+    getReceivables(filter).then((rows) => {
+      setReceivables(rows as Receivable[]);
+      const unpaid = rows.filter((r) => r.payment_status === "UNPAID").length;
+      const partial = rows.filter((r) => r.payment_status === "PARTIAL").length;
+      const total = rows.reduce((sum, r) => sum + r.remaining, 0);
+      setSummary({ unpaid, partial, total });
+    });
+  }, [filter]);
 
   return (
     <div className="space-y-4 p-4">

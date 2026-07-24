@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,15 +14,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useAuth } from "@/lib/auth/context";
 import { addOrder, getCustomers } from "@/lib/store";
-import { DeliveryMethod, PaymentStatus, OrderStatus } from "@/lib/types";
+import { DeliveryMethod, PaymentStatus, OrderStatus, Customer } from "@/lib/types";
 
 export default function NewOrderPage() {
-  const { user } = useAuth();
   const router = useRouter();
-  const customers = useMemo(() => (user ? getCustomers(user.id) : []), [user]);
-
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerId, setCustomerId] = useState("");
   const [product, setProduct] = useState("");
   const [quantity, setQuantity] = useState(1);
@@ -33,15 +30,18 @@ export default function NewOrderPage() {
   const [notes, setNotes] = useState("");
 
   useEffect(() => {
-    if (customers.length && !customerId) setCustomerId(customers[0].id);
-  }, [customers, customerId]);
+    getCustomers().then((c) => {
+      setCustomers(c);
+      if (c.length && !customerId) setCustomerId(c[0].id);
+    });
+  }, [customerId]);
 
   const total = quantity * unitPrice;
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !customerId || !product.trim()) return;
-    addOrder(user.id, {
+    if (!customerId || !product.trim()) return;
+    await addOrder({
       customer_id: customerId,
       product_name: product.trim(),
       quantity,
@@ -77,7 +77,7 @@ export default function NewOrderPage() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label>Customer</Label>
-              <Select value={customerId} onValueChange={(v) => setCustomerId(v ?? "")}>
+              <Select value={customerId} onValueChange={(v) => v && setCustomerId(v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select customer" />
                 </SelectTrigger>

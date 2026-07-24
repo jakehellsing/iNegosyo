@@ -7,21 +7,19 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAuth } from "@/lib/auth/context";
 import { addCustomer } from "@/lib/store";
 
 export default function NewCustomerPage() {
-  const { user } = useAuth();
   const router = useRouter();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !name.trim()) return;
-    addCustomer(user.id, {
+    if (!name.trim()) return;
+    await addCustomer({
       name: name.trim(),
       phone_number: phone.trim() || undefined,
       address: address.trim() || undefined,

@@ -8,7 +8,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useAuth } from "@/lib/auth/context";
 import {
   deleteOrder,
   deliveryMethodLabels,
@@ -24,17 +23,16 @@ import { formatPeso } from "@/lib/utils";
 const filters: OrderStatus[] = ["PENDING", "PREPARING", "READY", "DELIVERED", "CANCELLED"];
 
 export default function OrdersPage() {
-  const { user } = useAuth();
   const [query, setQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<OrderStatus | "ALL">("ALL");
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
 
-  const refresh = useCallback(() => {
-    if (!user) return;
-    setOrders(getOrders(user.id));
-    setCustomers(getCustomers(user.id));
-  }, [user]);
+  const refresh = useCallback(async () => {
+    const [o, c] = await Promise.all([getOrders(), getCustomers()]);
+    setOrders(o);
+    setCustomers(c);
+  }, []);
 
   useEffect(() => {
     refresh();
@@ -58,22 +56,19 @@ export default function OrdersPage() {
     return list;
   }, [orders, activeFilter, query, customerMap]);
 
-  const updateStatus = (id: string, status: OrderStatus) => {
-    if (!user) return;
-    updateOrder(user.id, id, { order_status: status });
+  const updateStatus = async (id: string, status: OrderStatus) => {
+    await updateOrder(id, { order_status: status });
     refresh();
   };
 
-  const updatePayment = (id: string, status: PaymentStatus) => {
-    if (!user) return;
-    updateOrder(user.id, id, { payment_status: status });
+  const updatePayment = async (id: string, status: PaymentStatus) => {
+    await updateOrder(id, { payment_status: status });
     refresh();
   };
 
-  const handleDelete = (id: string) => {
-    if (!user) return;
+  const handleDelete = async (id: string) => {
     if (!confirm("Delete this order?")) return;
-    deleteOrder(user.id, id);
+    await deleteOrder(id);
     refresh();
   };
 

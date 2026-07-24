@@ -4,13 +4,11 @@ import { useEffect, useState } from "react";
 import { Clock, Package, Receipt, Wallet } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/lib/auth/context";
 import { getDashboardStats, orderStatusLabels, paymentStatusLabels } from "@/lib/store";
 import { formatPeso } from "@/lib/utils";
 import { Order } from "@/lib/types";
 
 export default function DashboardPage() {
-  const { user } = useAuth();
   const [stats, setStats] = useState<{
     pendingOrders: number;
     ordersToday: number;
@@ -20,9 +18,14 @@ export default function DashboardPage() {
   } | null>(null);
 
   useEffect(() => {
-    if (!user) return;
-    setStats(getDashboardStats(user.id));
-  }, [user]);
+    let active = true;
+    getDashboardStats().then((s) => {
+      if (active) setStats(s);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   if (!stats) {
     return (

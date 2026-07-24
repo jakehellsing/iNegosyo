@@ -2,17 +2,15 @@
 
 import { createContext, ReactNode, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { User } from "@/lib/types";
-import { seedData } from "@/lib/store";
-
-const AUTH_KEY = "inegosyo_user";
+import { User } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/client";
 
 interface AuthContextValue {
   user: User | null;
   isLoading: boolean;
-  login: (email: string) => void;
-  signup: (email: string) => void;
-  logout: () => void;
+  signIn: (email: string, password: string) => Promise<string | undefined>;
+  signUp: (email: string, password: string) => Promise<string | undefined>;
+  signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -21,42 +19,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const supabase = createClient();
 
   useEffect(() => {
-    const raw = typeof window !== "undefined" ? localStorage.getItem(AUTH_KEY) : null;
-    if (raw) {
-      try {
-        setUser(JSON.parse(raw));
-      } catch {
-        setUser(null);
-      }
-    }
-    setIsLoading(false);
-  }, []);
+    supabase.auth.getSession().then(({ data }) => {
+      setUser(data.session?.user ?? null);
+      setIsLoading(false);
+    });
 
-  const persist = (u: User) => {
-    localStorage.setItem(AUTH_KEY, JSON.stringify(u));
-    setUser(u);
-    seedData(u.id);
-  };
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
 
-  const login = (email: string) => {
-    const u: User = { id: self.crypto.randomUUID(), email, created_at: new Date().toISOString() };
-    persist(u);
+    return () => listener.subscription.unsubscribe();
+  }, [supabase]);
+
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return error.message;
     router.push("/dashboard");
   };
 
-  const signup = (email: string) => {
-    login(email);
-  };
-
-  const logout = () => {
-    localStorage.removeItem(AUTH_KEY);
-    setUser(null);
+  const signUp = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signUp({ email, password });
+    if (error) return error.message;
     router.push("/login");
   };
 
-  return <AuthContext.Provider value={{ user, isLoading, login, signup, logout }}>{children}</AuthContext.Provider>;
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, isLoading, signIn, signUp, signOut }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {
@@ -75,6 +74,13 @@ export function AuthGuard({ children }: { children: ReactNode }) {
     }
   }, [isLoading, user, router]);
 
-  if (isLoading || !user) return null;
+  if (isLoading || !user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-muted-foreground">
+        Loading…
+      </div>
+    );
+  }
+
   return <>{children}</>;
 }

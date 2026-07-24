@@ -6,19 +6,17 @@ import { Plus, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { useAuth } from "@/lib/auth/context";
 import { deleteCustomer, getCustomers } from "@/lib/store";
 import { Customer } from "@/lib/types";
 
 export default function CustomersPage() {
-  const { user } = useAuth();
   const [query, setQuery] = useState("");
   const [customers, setCustomers] = useState<Customer[]>([]);
 
-  const refresh = useCallback(() => {
-    if (!user) return;
-    setCustomers(getCustomers(user.id));
-  }, [user]);
+  const refresh = useCallback(async () => {
+    const data = await getCustomers();
+    setCustomers(data);
+  }, []);
 
   useEffect(() => {
     refresh();
@@ -28,10 +26,9 @@ export default function CustomersPage() {
     return customers.filter((c) => c.name.toLowerCase().includes(query.toLowerCase()));
   }, [customers, query]);
 
-  const handleDelete = (id: string) => {
-    if (!user) return;
+  const handleDelete = async (id: string) => {
     if (!confirm("Delete this customer?")) return;
-    deleteCustomer(user.id, id);
+    await deleteCustomer(id);
     refresh();
   };
 
