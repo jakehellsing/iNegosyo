@@ -4,8 +4,8 @@ import { Customer, DeliveryMethod, Order, OrderStatus, PaymentStatus } from "./t
 const supabase = createClient();
 
 async function currentUser() {
-  const { data } = await supabase.auth.getUser();
-  return data.user;
+  const { data } = await supabase.auth.getSession();
+  return data.session?.user ?? null;
 }
 
 export async function getCustomers(): Promise<Customer[]> {
