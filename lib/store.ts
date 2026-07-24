@@ -1,17 +1,24 @@
 import { createClient } from "@/lib/supabase/client";
 import { Customer, DeliveryMethod, Order, OrderStatus, PaymentStatus } from "./types";
 
-const supabase = createClient();
+let supabaseClient: ReturnType<typeof createClient> | undefined;
+
+function getSupabase() {
+  if (!supabaseClient) {
+    supabaseClient = createClient();
+  }
+  return supabaseClient;
+}
 
 async function currentUser() {
-  const { data } = await supabase.auth.getSession();
+  const { data } = await getSupabase().auth.getSession();
   return data.session?.user ?? null;
 }
 
 export async function getCustomers(): Promise<Customer[]> {
   const user = await currentUser();
   if (!user) return [];
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from("customers")
     .select("*")
     .eq("user_id", user.id)
@@ -23,7 +30,7 @@ export async function getCustomers(): Promise<Customer[]> {
 export async function getCustomer(id: string): Promise<Customer | undefined> {
   const user = await currentUser();
   if (!user) return undefined;
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from("customers")
     .select("*")
     .eq("id", id)
@@ -38,7 +45,7 @@ export async function addCustomer(
 ): Promise<Customer> {
   const user = await currentUser();
   if (!user) throw new Error("Not authenticated");
-  const { data: row, error } = await supabase
+  const { data: row, error } = await getSupabase()
     .from("customers")
     .insert({ ...data, user_id: user.id })
     .select()
@@ -50,7 +57,7 @@ export async function addCustomer(
 export async function updateCustomer(id: string, data: Partial<Customer>): Promise<Customer | undefined> {
   const user = await currentUser();
   if (!user) return undefined;
-  const { data: row, error } = await supabase
+  const { data: row, error } = await getSupabase()
     .from("customers")
     .update(data)
     .eq("id", id)
@@ -64,14 +71,14 @@ export async function updateCustomer(id: string, data: Partial<Customer>): Promi
 export async function deleteCustomer(id: string): Promise<boolean> {
   const user = await currentUser();
   if (!user) return false;
-  const { error } = await supabase.from("customers").delete().eq("id", id).eq("user_id", user.id);
+  const { error } = await getSupabase().from("customers").delete().eq("id", id).eq("user_id", user.id);
   return !error;
 }
 
 export async function getOrders(): Promise<Order[]> {
   const user = await currentUser();
   if (!user) return [];
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from("orders")
     .select("*")
     .eq("user_id", user.id)
@@ -83,7 +90,7 @@ export async function getOrders(): Promise<Order[]> {
 export async function getOrder(id: string): Promise<Order | undefined> {
   const user = await currentUser();
   if (!user) return undefined;
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from("orders")
     .select("*")
     .eq("id", id)
@@ -98,7 +105,7 @@ export async function addOrder(
 ): Promise<Order> {
   const user = await currentUser();
   if (!user) throw new Error("Not authenticated");
-  const { data: row, error } = await supabase
+  const { data: row, error } = await getSupabase()
     .from("orders")
     .insert({ ...data, user_id: user.id })
     .select()
@@ -110,7 +117,7 @@ export async function addOrder(
 export async function updateOrder(id: string, data: Partial<Order>): Promise<Order | undefined> {
   const user = await currentUser();
   if (!user) return undefined;
-  const { data: row, error } = await supabase
+  const { data: row, error } = await getSupabase()
     .from("orders")
     .update(data)
     .eq("id", id)
@@ -124,7 +131,7 @@ export async function updateOrder(id: string, data: Partial<Order>): Promise<Ord
 export async function deleteOrder(id: string): Promise<boolean> {
   const user = await currentUser();
   if (!user) return false;
-  const { error } = await supabase.from("orders").delete().eq("id", id).eq("user_id", user.id);
+  const { error } = await getSupabase().from("orders").delete().eq("id", id).eq("user_id", user.id);
   return !error;
 }
 
@@ -150,7 +157,7 @@ export async function getDashboardStats() {
 export async function getReceivables(filter?: PaymentStatus | "ALL") {
   const user = await currentUser();
   if (!user) return [];
-  let query = supabase
+  let query = getSupabase()
     .from("orders")
     .select("*, customers(name)")
     .eq("user_id", user.id)
