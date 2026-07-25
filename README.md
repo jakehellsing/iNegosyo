@@ -6,7 +6,7 @@ A mobile-first order, customer, and payment tracker for small home-based PH busi
 
 | Area | Status | Notes |
 |------|--------|-------|
-| **Repo** | `main` branch, tag `v0.2.9` | Version tags are used instead of release branches. |
+| **Repo** | `main` branch, tag `v0.2.10` | Version tags are used instead of release branches. |
 | **Local dev** | Working | `npm run dev` at `http://localhost:3000` with `.env.local` containing Supabase credentials. |
 | **Database** | Supabase | `customers` and `orders` tables (`001_initial_schema.sql`) plus per-user `profiles`/plans (`002_plans.sql`) with enums, RLS policies, and triggers. Apply migrations in order. |
 | **Auth** | Supabase email/password | Sign-up, login, and protected routes via `lib/auth/context.tsx`. |

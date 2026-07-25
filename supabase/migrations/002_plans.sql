@@ -214,3 +214,12 @@ CREATE TRIGGER customers_enforce_limit BEFORE INSERT ON customers
 
 CREATE TRIGGER orders_enforce_limit BEFORE INSERT ON orders
     FOR EACH ROW EXECUTE FUNCTION enforce_order_limit();
+
+-- ---------------------------------------------------------------------------
+-- Table privileges
+-- ---------------------------------------------------------------------------
+-- Hosted Supabase auto-grants these to the API roles, but a fresh local /
+-- self-hosted stack does not, which yields "permission denied for table ..."
+-- despite RLS. Granting explicitly keeps local and hosted in parity; RLS
+-- policies (above and in 001) remain the actual row-level access control.
+GRANT ALL ON TABLE profiles, customers, orders TO anon, authenticated, service_role;
