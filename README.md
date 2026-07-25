@@ -6,7 +6,7 @@ A mobile-first order, customer, and payment tracker for small home-based PH busi
 
 | Area | Status | Notes |
 |------|--------|-------|
-| **Repo** | `main` branch, tag `v0.2.10` | Version tags are used instead of release branches. |
+| **Repo** | `main` branch, tag `v0.2.12` | Version tags are used instead of release branches. |
 | **Local dev** | Working | `npm run dev` at `http://localhost:3000` with `.env.local` containing Supabase credentials. |
 | **Database** | Supabase | `customers` and `orders` tables (`001_initial_schema.sql`) plus per-user `profiles`/plans (`002_plans.sql`) with enums, RLS policies, and triggers. Apply migrations in order. |
 | **Auth** | Supabase email/password | Sign-up, login, and protected routes via `lib/auth/context.tsx`. |
@@ -56,11 +56,14 @@ supabase/
    npm install
    ```
 
-3. Apply the Supabase migration before running the app:
+3. Apply every pending Supabase migration before running the app:
 
    - Open your Supabase project → **SQL Editor**
-   - Paste and run `supabase/migrations/001_initial_schema.sql`
-   - Then paste and run `supabase/migrations/002_plans.sql` (plans/profiles)
+   - Check which migration files have already been applied in this project.
+   - Run each missing file from `supabase/migrations/` in filename order, one at a time.
+   - For a new database, run `001_initial_schema.sql` first, then `002_plans.sql`.
+   - Do not re-run a migration that already succeeded; migrations are incremental.
+   - After applying a new migration, verify the tables/functions it adds before using the app.
 
 4. Run the development server:
 
@@ -153,7 +156,7 @@ This roadmap should be prioritized based on user feedback and business size.
 |-------|------------|-------|
 | **Source code** | `github.com/jakehellsing/iNegosyo` | `main` branch, versioned with git tags. |
 | **Local dev** | `http://localhost:3000` | Run `npm run dev` with `.env.local` values. |
-| **Database + Auth** | Supabase project `xyqfpszxoyjksywmdlpj` | Apply `supabase/migrations/001_initial_schema.sql` in the SQL Editor before using the app. |
+| **Database + Auth** | Supabase project `xyqfpszxoyjksywmdlpj` | Apply every pending file in `supabase/migrations/` through the SQL Editor, in filename order, before using the app. |
 | **Production hosting** | Vercel (project `i-negosyo`) | Auto-deploys from every push to `main`. |
 
 ## Deployment
@@ -163,6 +166,19 @@ vercel
 ```
 
 **Important:** `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` must already exist in **Vercel → Project Settings → Environment Variables** when the build runs. If they are added after a deployment, trigger a redeploy (push a new commit or click **Redeploy**) so the values are baked into the bundle.
+
+### Database migration reminder
+
+Whenever a new file is added to `supabase/migrations/`:
+
+1. Commit and deploy the code.
+2. Open the target Supabase project’s **SQL Editor**.
+3. Run the new migration after all earlier migrations have been applied.
+4. Record that it was applied so it is not run twice.
+5. Verify any new tables, policies, functions, triggers, and grants.
+
+The app deployment and database migration are separate steps. A Vercel deployment does
+not automatically apply Supabase SQL migrations.
 
 ## Scripts
 
