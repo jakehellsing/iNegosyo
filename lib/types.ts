@@ -29,8 +29,24 @@ export interface Order {
   updated_at: string;
 }
 
+export type PlanTier = "free" | "pro" | "custom";
+
+export interface Profile {
+  id: string;
+  plan: PlanTier;
+  role: string;
+  max_customers: number | null;
+  max_orders: number | null;
+  features: Record<string, boolean> | null;
+  plan_expires_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface User {
   id: string;
   email: string;
+  plan?: PlanTier;
+  role?: string;
   created_at?: string;
 }

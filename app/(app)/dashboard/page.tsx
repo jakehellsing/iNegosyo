@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Clock, Package, Receipt, Wallet } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { getDashboardStats, orderStatusLabels, paymentStatusLabels } from "@/lib/store";
 import { formatPeso } from "@/lib/utils";
 import { Order } from "@/lib/types";
+import { useAuth } from "@/lib/auth/context";
+import { PLAN_LABELS } from "@/lib/plans";
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<{
@@ -37,9 +40,12 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 p-4">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">Overview of today’s business.</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Overview of today’s business.</p>
+        </div>
+        <PlanBadge />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -77,6 +83,15 @@ export default function DashboardPage() {
         )}
       </section>
     </div>
+  );
+}
+
+function PlanBadge() {
+  const { plan } = useAuth();
+  return (
+    <Link href="/settings" aria-label="View plan and settings">
+      <Badge variant={plan === "free" ? "outline" : "default"}>{PLAN_LABELS[plan]}</Badge>
+    </Link>
   );
 }
 

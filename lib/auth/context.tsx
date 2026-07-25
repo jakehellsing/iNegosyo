@@ -4,9 +4,20 @@ import { createContext, ReactNode, useContext, useEffect, useRef, useState } fro
 import { useRouter } from "next/navigation";
 import { SupabaseClient, User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
+import { Profile, PlanTier } from "@/lib/types";
+import {
+  effectivePlan,
+  effectiveLimit,
+  hasFeature,
+  LimitedResource,
+  PlanFeature,
+} from "@/lib/plans";
 
 interface AuthContextValue {
   user: User | null;
+  profile: Profile | null;
+  plan: PlanTier;
+  role: string;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<string | undefined>;
   signUp: (email: string, password: string) => Promise<string | undefined>;
@@ -15,8 +26,22 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+async function fetchProfile(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<Profile | null> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .single();
+  if (error) return null;
+  return data as Profile;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const supabaseRef = useRef<SupabaseClient | null>(null);
@@ -25,13 +50,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const supabase = createClient();
     supabaseRef.current = supabase;
 
-    supabase.auth.getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null);
+    supabase.auth.getSession().then(async ({ data }) => {
+      const sessionUser = data.session?.user ?? null;
+      setUser(sessionUser);
+      setProfile(sessionUser ? await fetchProfile(supabase, sessionUser.id) : null);
       setIsLoading(false);
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const sessionUser = session?.user ?? null;
+      setUser(sessionUser);
+      setProfile(sessionUser ? await fetchProfile(supabase, sessionUser.id) : null);
     });
 
     return () => listener.subscription.unsubscribe();
@@ -62,7 +91,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, signIn, signUp, signOut }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        profile,
+        plan: effectivePlan(profile),
+        role: profile?.role ?? "user",
+        isLoading,
+        signIn,
+        signUp,
+        signOut,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -72,6 +112,57 @@ export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
+}
+
+/** True when the current user's effective plan unlocks `feature`. */
+export function useFeature(feature: PlanFeature): boolean {
+  const { profile } = useAuth();
+  return hasFeature(profile, feature);
+}
+
+/** Effective limit for a resource; `null` means unlimited. */
+export function usePlanLimit(resource: LimitedResource): number | null {
+  const { profile } = useAuth();
+  return effectiveLimit(profile, resource);
+}
+
+/**
+ * Guards children behind a required feature, mirroring {@link AuthGuard}.
+ * Renders `fallback` (default: an upgrade prompt) when the feature is locked.
+ */
+export function RequirePlan({
+  feature,
+  children,
+  fallback,
+}: {
+  feature: PlanFeature;
+  children: ReactNode;
+  fallback?: ReactNode;
+}) {
+  const { isLoading } = useAuth();
+  const unlocked = useFeature(feature);
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[8rem] items-center justify-center text-muted-foreground">
+        Loading…
+      </div>
+    );
+  }
+
+  if (!unlocked) {
+    return (
+      <>
+        {fallback ?? (
+          <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
+            This feature is available on the Pro plan. Contact an admin to upgrade.
+          </div>
+        )}
+      </>
+    );
+  }
+
+  return <>{children}</>;
 }
 
 export function AuthGuard({ children }: { children: ReactNode }) {
