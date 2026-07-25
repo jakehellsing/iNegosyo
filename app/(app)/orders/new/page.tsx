@@ -91,7 +91,12 @@ export default function NewOrderPage() {
               <Label>Customer</Label>
               <Select value={customerId} onValueChange={(v) => v && setCustomerId(v)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select customer" />
+                  <SelectValue placeholder="Select customer">
+                    {(value) =>
+                      customers.find((c) => c.id === value)?.name ??
+                      (value || "Select customer")
+                    }
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {customers.map((c) => (
