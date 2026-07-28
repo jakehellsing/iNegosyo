@@ -4,6 +4,7 @@ import { createContext, ReactNode, useContext, useEffect, useRef, useState } fro
 import { useRouter } from "next/navigation";
 import { SupabaseClient, User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
+import { updateProfile as updateProfileInStore } from "@/lib/store";
 import { Profile, PlanTier } from "@/lib/types";
 import {
   effectivePlan,
@@ -13,6 +14,13 @@ import {
   PlanFeature,
 } from "@/lib/plans";
 
+export interface SignUpProfileData {
+  business_name: string;
+  full_name: string;
+  contact_number: string;
+  address?: string;
+}
+
 interface AuthContextValue {
   user: User | null;
   profile: Profile | null;
@@ -20,7 +28,12 @@ interface AuthContextValue {
   role: string;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<string | undefined>;
-  signUp: (email: string, password: string) => Promise<string | undefined>;
+  signUp: (
+    email: string,
+    password: string,
+    profileData: SignUpProfileData
+  ) => Promise<string | undefined>;
+  updateProfile: (update: Partial<SignUpProfileData>) => Promise<string | undefined>;
   signOut: () => Promise<void>;
 }
 
@@ -79,10 +92,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push("/dashboard");
   };
 
-  const signUp = async (email: string, password: string) => {
-    const { error } = await getSupabase().auth.signUp({ email, password });
+  const signUp = async (email: string, password: string, profileData: SignUpProfileData) => {
+    const { error } = await getSupabase().auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          business_name: profileData.business_name,
+          full_name: profileData.full_name,
+          contact_number: profileData.contact_number,
+          address: profileData.address,
+        },
+      },
+    });
     if (error) return error.message;
     router.push("/login");
+  };
+
+  const updateProfile = async (update: Partial<SignUpProfileData>) => {
+    if (!user) return "Not authenticated";
+    try {
+      const refreshed = await updateProfileInStore({
+        business_name: update.business_name?.trim() || null,
+        full_name: update.full_name?.trim() || null,
+        contact_number: update.contact_number?.trim() || null,
+        address: update.address?.trim() || null,
+      });
+      setProfile(refreshed);
+    } catch (e) {
+      return e instanceof Error ? e.message : String(e);
+    }
   };
 
   const signOut = async () => {
@@ -100,6 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         signIn,
         signUp,
+        updateProfile,
         signOut,
       }}
     >

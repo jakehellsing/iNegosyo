@@ -43,6 +43,30 @@ export async function getProfile(): Promise<Profile | null> {
   return data as Profile;
 }
 
+export type ProfileUpdate = Partial<
+  Pick<Profile, "business_name" | "full_name" | "contact_number" | "address">
+>;
+
+export async function updateProfile(update: ProfileUpdate): Promise<Profile> {
+  const user = await currentUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const payload: ProfileUpdate = {};
+  for (const [key, value] of Object.entries(update)) {
+    (payload as Record<string, unknown>)[key] =
+      typeof value === "string" && value.trim() === "" ? null : value;
+  }
+
+  const { data, error } = await getSupabase()
+    .from("profiles")
+    .update(payload)
+    .eq("id", user.id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as Profile;
+}
+
 async function countRows(table: "customers" | "orders", userId: string): Promise<number> {
   const { count } = await getSupabase()
     .from(table)

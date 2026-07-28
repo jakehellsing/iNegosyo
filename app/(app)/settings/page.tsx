@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { BarChart3, ShieldCheck } from "lucide-react";
+import { BarChart3, ShieldCheck, User } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import { useAuth, RequirePlan } from "@/lib/auth/context";
 import { PLAN_LABELS } from "@/lib/plans";
+import { cn } from "@/lib/utils";
 import {
   getAdvancedAnalytics,
   getPlanUsage,
@@ -58,6 +60,27 @@ export default function SettingsPage() {
               Reached a limit? Contact an admin to upgrade to Pro for higher (unlimited) caps.
             </p>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Profile</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center gap-2 text-sm">
+            <User className="h-4 w-4 text-muted-foreground" />
+            <span>{profile?.full_name || user?.email}</span>
+          </div>
+          {profile?.business_name && (
+            <p className="text-sm text-muted-foreground">{profile.business_name}</p>
+          )}
+          <Link
+            href="/profile"
+            className={cn(buttonVariants({ variant: "outline" }), "w-full")}
+          >
+            Edit Profile
+          </Link>
         </CardContent>
       </Card>
 

@@ -10,6 +10,10 @@ import { useAuth } from "@/lib/auth/context";
 
 export default function SignupPage() {
   const { signUp } = useAuth();
+  const [businessName, setBusinessName] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [contactNumber, setContactNumber] = useState("");
+  const [address, setAddress] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -18,7 +22,12 @@ export default function SignupPage() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    const message = await signUp(email.trim(), password);
+    const message = await signUp(email.trim(), password, {
+      business_name: businessName.trim(),
+      full_name: fullName.trim(),
+      contact_number: contactNumber.trim(),
+      address: address.trim(),
+    });
     if (message) setError(message);
     else setSuccess(true);
   };
@@ -40,6 +49,46 @@ export default function SignupPage() {
             </p>
           ) : (
             <form onSubmit={submit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="businessName">Business Name</Label>
+                <Input
+                  id="businessName"
+                  placeholder="Mang Juan's Sari-Sari Store"
+                  value={businessName}
+                  onValueChange={(v) => setBusinessName(v)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="fullName">Full Name</Label>
+                <Input
+                  id="fullName"
+                  placeholder="Juan dela Cruz"
+                  value={fullName}
+                  onValueChange={(v) => setFullName(v)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="contactNumber">Contact Number</Label>
+                <Input
+                  id="contactNumber"
+                  type="tel"
+                  placeholder="09171234567"
+                  value={contactNumber}
+                  onValueChange={(v) => setContactNumber(v)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="address">Address</Label>
+                <Input
+                  id="address"
+                  placeholder="Manila, Philippines"
+                  value={address}
+                  onValueChange={(v) => setAddress(v)}
+                />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
