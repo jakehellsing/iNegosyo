@@ -18,4 +18,8 @@ git tag -a v0.2.8 -m "Release v0.2.8"
 git push origin v0.2.8
 ```
 
+## Supabase migrations
+
+Pushing code does **not** apply Supabase migrations. After any commit that adds or changes a file in `supabase/migrations/`, open the Supabase project SQL Editor and run the new migration in filename order after all earlier migrations. Record that it was applied so it is not run twice.
+
 Only deviate from this rule if explicitly instructed by the repository owner.
