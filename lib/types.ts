@@ -33,6 +33,7 @@ export type PlanTier = "free" | "pro" | "custom";
 
 export interface Profile {
   id: string;
+  email: string | null;
   business_name: string | null;
   full_name: string | null;
   contact_number: string | null;

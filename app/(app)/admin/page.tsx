@@ -147,10 +147,15 @@ function ProfileRow({
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="break-all text-sm font-medium">
-          {profile.id}
+        <CardTitle className="text-sm font-medium">
+          <span className="block">
+            {profile.business_name || profile.full_name || profile.id}
+          </span>
+          {profile.email && (
+            <span className="block text-xs text-muted-foreground">{profile.email}</span>
+          )}
           {profile.role === "admin" && (
-            <span className="ml-2 rounded bg-muted px-2 py-0.5 text-xs">admin</span>
+            <span className="mt-1 inline-block rounded bg-muted px-2 py-0.5 text-xs">admin</span>
           )}
         </CardTitle>
       </CardHeader>
