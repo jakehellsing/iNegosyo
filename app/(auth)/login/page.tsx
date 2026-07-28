@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/auth/context";
+import { AppFooter } from "@/components/layout/app-footer";
 
 export default function LoginPage() {
   const { signIn } = useAuth();
@@ -22,8 +23,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <Card className="w-full max-w-sm">
+    <div className="flex min-h-screen flex-col p-4">
+      <div className="flex flex-1 items-center justify-center">
+        <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle className="text-2xl">iNegosyo</CardTitle>
         </CardHeader>
@@ -64,6 +66,8 @@ export default function LoginPage() {
           </p>
         </CardContent>
       </Card>
+      </div>
+      <AppFooter />
     </div>
   );
 }
