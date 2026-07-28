@@ -84,14 +84,16 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      <section className="space-y-3">
-        <h2 className="flex items-center gap-2 text-lg font-semibold">
-          <BarChart3 className="h-5 w-5" /> Advanced Analytics
-        </h2>
-        <RequirePlan feature="advanced_analytics">
-          <AnalyticsPanel />
-        </RequirePlan>
-      </section>
+      {role !== "admin" && (
+        <section className="space-y-3">
+          <h2 className="flex items-center gap-2 text-lg font-semibold">
+            <BarChart3 className="h-5 w-5" /> Advanced Analytics
+          </h2>
+          <RequirePlan feature="advanced_analytics">
+            <AnalyticsPanel />
+          </RequirePlan>
+        </section>
+      )}
 
       {role === "admin" && (
         <Link
