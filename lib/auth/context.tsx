@@ -85,9 +85,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await getSupabase().auth.signInWithPassword({ email, password });
+    const { data, error } = await getSupabase().auth.signInWithPassword({ email, password });
     if (error) return error.message;
-    router.push("/dashboard");
+
+    const sessionUser = data.user;
+    const profile = sessionUser ? await fetchProfile(getSupabase(), sessionUser.id) : null;
+    router.push(profile?.role === "admin" ? "/admin" : "/dashboard");
   };
 
   const signUp = async (email: string, password: string, profileData: SignUpProfileData) => {
