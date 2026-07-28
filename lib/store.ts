@@ -380,7 +380,10 @@ export async function updateUserPlan(
     patch.max_customers = null;
     patch.max_orders = null;
   }
-  if (update.plan_expires_at !== undefined) {
+  if (update.plan === "free") {
+    // Free plans don't carry an expiry; clear it to avoid surprising resurrections.
+    patch.plan_expires_at = null;
+  } else if (update.plan_expires_at !== undefined) {
     patch.plan_expires_at = update.plan_expires_at;
   }
 
