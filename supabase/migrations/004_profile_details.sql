@@ -28,10 +28,10 @@ BEGIN
         address
     ) VALUES (
         NEW.id,
-        NEW.raw_user_meta_data ->> 'business_name',
-        NEW.raw_user_meta_data ->> 'full_name',
-        NEW.raw_user_meta_data ->> 'contact_number',
-        NEW.raw_user_meta_data ->> 'address'
+        NULLIF(NEW.raw_user_meta_data ->> 'business_name', ''),
+        NULLIF(NEW.raw_user_meta_data ->> 'full_name', ''),
+        NULLIF(NEW.raw_user_meta_data ->> 'contact_number', ''),
+        NULLIF(NEW.raw_user_meta_data ->> 'address', '')
     )
     ON CONFLICT (id) DO NOTHING;
     RETURN NEW;
