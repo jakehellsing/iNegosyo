@@ -42,13 +42,14 @@ export const PLAN_LABELS: Record<PlanTier, string> = {
 export const ALL_PLANS: PlanTier[] = ["free", "pro", "custom"];
 
 /**
- * Resolve the effective plan, downgrading an expired `pro` plan to `free`.
+ * Resolve the effective plan, downgrading an expired paid plan to `free`.
+ * Applies to `pro` and `custom` tiers with a `plan_expires_at` in the past.
  * Mirrors the SQL `effective_plan_for` helper.
  */
 export function effectivePlan(profile: Profile | null | undefined): PlanTier {
   if (!profile) return "free";
   if (
-    profile.plan === "pro" &&
+    profile.plan !== "free" &&
     profile.plan_expires_at &&
     new Date(profile.plan_expires_at).getTime() < Date.now()
   ) {
@@ -106,4 +107,31 @@ function isPlanFeature(value: string): value is PlanFeature {
     value === "data_export" ||
     value === "unlimited_records"
   );
+}
+
+/**
+ * Format an ISO timestamp as `yyyy-mm-dd` in the local timezone for a date input.
+ * Returns an empty string when the value is missing or invalid.
+ */
+export function formatDateInput(value: string | null | undefined): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (isNaN(date.getTime())) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Convert a `yyyy-mm-dd` string to an ISO timestamp representing the end of that
+ * day in local time. Returns `null` for an empty or invalid value.
+ */
+export function parseExpiryDate(value: string): string | null {
+  if (!value.trim()) return null;
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return null;
+  const date = new Date(year, month - 1, day, 23, 59, 59);
+  if (isNaN(date.getTime())) return null;
+  return date.toISOString();
 }

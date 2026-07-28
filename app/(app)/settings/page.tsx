@@ -16,7 +16,7 @@ import {
 import { formatPeso } from "@/lib/utils";
 
 export default function SettingsPage() {
-  const { user, plan, role } = useAuth();
+  const { user, plan, role, profile } = useAuth();
   const [usage, setUsage] = useState<PlanUsage | null>(null);
 
   useEffect(() => {
@@ -48,6 +48,11 @@ export default function SettingsPage() {
             count={usage?.orders.count}
             limit={usage?.orders.limit}
           />
+          {plan !== "free" && profile?.plan_expires_at && (
+            <p className="text-sm text-muted-foreground">
+              Plan expires on {new Date(profile.plan_expires_at).toLocaleDateString()}.
+            </p>
+          )}
           {plan === "free" && (
             <p className="text-sm text-muted-foreground">
               Reached a limit? Contact an admin to upgrade to Pro for higher (unlimited) caps.

@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/lib/auth/context";
-import { ALL_PLANS, PLAN_LABELS } from "@/lib/plans";
+import { ALL_PLANS, formatDateInput, parseExpiryDate, PLAN_LABELS } from "@/lib/plans";
 import { getAllProfiles, updateUserPlan } from "@/lib/store";
 import { PlanTier, Profile } from "@/lib/types";
 
@@ -58,7 +58,7 @@ export default function AdminPage() {
         </Button>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">User Plans</h1>
-          <p className="text-sm text-muted-foreground">Assign plans and custom limits.</p>
+          <p className="text-sm text-muted-foreground">Assign plans, durations, and custom limits.</p>
         </div>
       </div>
 
@@ -85,6 +85,7 @@ function ProfileRow({
     profile.max_customers?.toString() ?? ""
   );
   const [maxOrders, setMaxOrders] = useState(profile.max_orders?.toString() ?? "");
+  const [expiresAt, setExpiresAt] = useState(formatDateInput(profile.plan_expires_at));
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
 
@@ -98,6 +99,7 @@ function ProfileRow({
         plan,
         max_customers: parse(maxCustomers),
         max_orders: parse(maxOrders),
+        plan_expires_at: parseExpiryDate(expiresAt),
       });
       onSaved(updated);
       setStatus("Saved");
@@ -134,6 +136,33 @@ function ProfileRow({
             </SelectContent>
           </Select>
         </div>
+
+        {plan !== "free" && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor={`exp-${profile.id}`}>Plan expires</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-auto px-2 py-0 text-xs text-muted-foreground"
+                onClick={() => setExpiresAt("")}
+                disabled={!expiresAt}
+              >
+                Clear
+              </Button>
+            </div>
+            <Input
+              id={`exp-${profile.id}`}
+              type="date"
+              value={expiresAt}
+              onChange={(e) => setExpiresAt(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Leave blank so the plan never expires. Expired paid plans fall back to Free.
+            </p>
+          </div>
+        )}
 
         {plan === "custom" && (
           <div className="grid grid-cols-2 gap-3">
