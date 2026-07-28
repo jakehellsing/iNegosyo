@@ -2,12 +2,19 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   Select,
   SelectContent,
@@ -15,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/lib/auth/context";
 import { ALL_PLANS, formatDateInput, parseExpiryDate, PLAN_LABELS } from "@/lib/plans";
 import { getAllProfiles, updateUserPlan, updateProfileDetails } from "@/lib/store";
@@ -25,6 +33,7 @@ export default function AdminPage() {
   const { role, isLoading } = useAuth();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Profile | null>(null);
 
   useEffect(() => {
     if (!isLoading && role !== "admin") {
@@ -48,8 +57,10 @@ export default function AdminPage() {
     );
   }
 
-  const onSaved = (updated: Profile) =>
+  const onSaved = (updated: Profile) => {
     setProfiles((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+    setSelected(updated);
+  };
 
   return (
     <div className="space-y-4 p-4">
@@ -59,7 +70,7 @@ export default function AdminPage() {
         </Button>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">User Management</h1>
-          <p className="text-sm text-muted-foreground">Assign plans and edit profile details.</p>
+          <p className="text-sm text-muted-foreground">Tap a user to manage their plan and details.</p>
         </div>
       </div>
 
@@ -67,24 +78,91 @@ export default function AdminPage() {
 
       <div className="space-y-3">
         {profiles.map((profile) => (
-          <ProfileRow key={profile.id} profile={profile} onSaved={onSaved} />
+          <UserListItem
+            key={profile.id}
+            profile={profile}
+            onClick={() => setSelected(profile)}
+          />
         ))}
       </div>
+
+      <UserDetailSheet
+        profile={selected}
+        onClose={() => setSelected(null)}
+        onSaved={onSaved}
+      />
     </div>
   );
 }
 
-function ProfileRow({
+function UserListItem({ profile, onClick }: { profile: Profile; onClick: () => void }) {
+  const displayName = profile.business_name || profile.full_name || profile.email || profile.id;
+
+  return (
+    <Card
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      className="cursor-pointer hover:bg-muted/50"
+    >
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <div className="min-w-0 flex-1">
+          <CardTitle className="truncate text-sm font-medium">
+            {displayName}
+          </CardTitle>
+          {profile.email && profile.email !== displayName && (
+            <CardDescription className="truncate">{profile.email}</CardDescription>
+          )}
+        </div>
+        <div className="ml-2 flex shrink-0 items-center gap-2">
+          <Badge variant={profile.plan === "free" ? "outline" : "default"}>
+            {PLAN_LABELS[profile.plan]}
+          </Badge>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </div>
+      </CardHeader>
+    </Card>
+  );
+}
+
+function UserDetailSheet({
   profile,
+  onClose,
   onSaved,
 }: {
-  profile: Profile;
+  profile: Profile | null;
+  onClose: () => void;
   onSaved: (p: Profile) => void;
 }) {
-  const [plan, setPlan] = useState<PlanTier>(profile.plan);
-  const [maxCustomers, setMaxCustomers] = useState(
-    profile.max_customers?.toString() ?? ""
+  const open = profile !== null;
+  if (!profile) return null;
+
+  return (
+    <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
+      <SheetContent side="right" className="w-3/4 max-w-sm overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>User Details</SheetTitle>
+          <SheetDescription>
+            {profile.business_name || profile.full_name || profile.email || profile.id}
+          </SheetDescription>
+        </SheetHeader>
+        <div className="mt-6">
+          <ProfileEditor profile={profile} onSaved={onSaved} />
+        </div>
+      </SheetContent>
+    </Sheet>
   );
+}
+
+function ProfileEditor({ profile, onSaved }: { profile: Profile; onSaved: (p: Profile) => void }) {
+  const [plan, setPlan] = useState<PlanTier>(profile.plan);
+  const [maxCustomers, setMaxCustomers] = useState(profile.max_customers?.toString() ?? "");
   const [maxOrders, setMaxOrders] = useState(profile.max_orders?.toString() ?? "");
   const [expiresAt, setExpiresAt] = useState(formatDateInput(profile.plan_expires_at));
   const [saving, setSaving] = useState(false);
@@ -98,15 +176,21 @@ function ProfileRow({
   const [detailsStatus, setDetailsStatus] = useState<string | null>(null);
 
   useEffect(() => {
+    setPlan(profile.plan);
+    setMaxCustomers(profile.max_customers?.toString() ?? "");
+    setMaxOrders(profile.max_orders?.toString() ?? "");
+    setExpiresAt(formatDateInput(profile.plan_expires_at));
     setBusinessName(profile.business_name ?? "");
     setFullName(profile.full_name ?? "");
     setContactNumber(profile.contact_number ?? "");
     setAddress(profile.address ?? "");
+    setStatus(null);
+    setDetailsStatus(null);
   }, [profile]);
 
   const parse = (v: string) => (v.trim() === "" ? null : Number(v));
 
-  const save = async () => {
+  const savePlan = async () => {
     setSaving(true);
     setStatus(null);
     try {
@@ -145,163 +229,144 @@ function ProfileRow({
   };
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium">
-          <span className="block">
-            {profile.business_name || profile.full_name || profile.id}
-          </span>
-          {profile.email && (
-            <span className="block text-xs text-muted-foreground">{profile.email}</span>
-          )}
-          {profile.role === "admin" && (
-            <span className="mt-1 inline-block rounded bg-muted px-2 py-0.5 text-xs">admin</span>
-          )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="space-y-2">
-          <Label>Plan</Label>
-          <Select value={plan} onValueChange={(v) => v && setPlan(v as PlanTier)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {ALL_PLANS.map((p) => (
-                <SelectItem key={p} value={p}>
-                  {PLAN_LABELS[p]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <Label>User ID</Label>
+        <p className="break-all text-xs text-muted-foreground">{profile.id}</p>
+      </div>
 
-        {plan !== "free" && (
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Plan</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor={`exp-${profile.id}`}>Plan expires</Label>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-auto px-2 py-0 text-xs text-muted-foreground"
-                onClick={() => setExpiresAt("")}
-                disabled={!expiresAt}
+            <Label>Plan</Label>
+            <Select value={plan} onValueChange={(v) => v && setPlan(v as PlanTier)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ALL_PLANS.map((p) => (
+                  <SelectItem key={p} value={p}>
+                    {PLAN_LABELS[p]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {plan !== "free" && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Plan expires</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto px-2 py-0 text-xs text-muted-foreground"
+                  onClick={() => setExpiresAt("")}
+                  disabled={!expiresAt}
+                >
+                  Clear
+                </Button>
+              </div>
+              <Input
+                type="date"
+                value={expiresAt}
+                onChange={(e) => setExpiresAt(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave blank so the plan never expires. Expired paid plans fall back to Free.
+              </p>
+            </div>
+          )}
+
+          {plan === "custom" && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Max customers</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  placeholder="Unlimited"
+                  value={maxCustomers}
+                  onValueChange={setMaxCustomers}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Max orders</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  placeholder="Unlimited"
+                  value={maxOrders}
+                  onValueChange={setMaxOrders}
+                />
+              </div>
+              <p className="col-span-2 text-xs text-muted-foreground">Leave blank for unlimited.</p>
+            </div>
+          )}
+
+          <div className="flex items-center gap-3">
+            <Button onClick={savePlan} disabled={saving}>
+              {saving ? "Saving…" : "Save plan"}
+            </Button>
+            {status && (
+              <span
+                className={
+                  status === "Saved" ? "text-sm text-muted-foreground" : "text-sm text-destructive"
+                }
               >
-                Clear
-              </Button>
-            </div>
-            <Input
-              id={`exp-${profile.id}`}
-              type="date"
-              value={expiresAt}
-              onChange={(e) => setExpiresAt(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              Leave blank so the plan never expires. Expired paid plans fall back to Free.
-            </p>
+                {status}
+              </span>
+            )}
           </div>
-        )}
+        </CardContent>
+      </Card>
 
-        {plan === "custom" && (
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor={`mc-${profile.id}`}>Max customers</Label>
-              <Input
-                id={`mc-${profile.id}`}
-                type="number"
-                min={0}
-                placeholder="Unlimited"
-                value={maxCustomers}
-                onValueChange={setMaxCustomers}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={`mo-${profile.id}`}>Max orders</Label>
-              <Input
-                id={`mo-${profile.id}`}
-                type="number"
-                min={0}
-                placeholder="Unlimited"
-                value={maxOrders}
-                onValueChange={setMaxOrders}
-              />
-            </div>
-            <p className="col-span-2 text-xs text-muted-foreground">
-              Leave blank for unlimited.
-            </p>
+      <Separator />
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Profile details</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="space-y-2">
+            <Label>Business Name</Label>
+            <Input value={businessName} onValueChange={setBusinessName} />
           </div>
-        )}
+          <div className="space-y-2">
+            <Label>Full Name</Label>
+            <Input value={fullName} onValueChange={setFullName} />
+          </div>
+          <div className="space-y-2">
+            <Label>Contact Number</Label>
+            <Input type="tel" value={contactNumber} onValueChange={setContactNumber} />
+          </div>
+          <div className="space-y-2">
+            <Label>Address</Label>
+            <Input value={address} onValueChange={setAddress} />
+          </div>
 
-        <div className="flex items-center gap-3">
-          <Button onClick={save} disabled={saving}>
-            {saving ? "Saving…" : "Save plan"}
-          </Button>
-          {status && (
-            <span
-              className={
-                status === "Saved" ? "text-sm text-muted-foreground" : "text-sm text-destructive"
-              }
-            >
-              {status}
-            </span>
-          )}
-        </div>
-
-        <Separator />
-
-        <p className="text-sm font-medium">Profile details</p>
-        <div className="space-y-2">
-          <Label htmlFor={`bn-${profile.id}`}>Business Name</Label>
-          <Input
-            id={`bn-${profile.id}`}
-            value={businessName}
-            onValueChange={setBusinessName}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor={`fn-${profile.id}`}>Full Name</Label>
-          <Input
-            id={`fn-${profile.id}`}
-            value={fullName}
-            onValueChange={setFullName}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor={`cn-${profile.id}`}>Contact Number</Label>
-          <Input
-            id={`cn-${profile.id}`}
-            type="tel"
-            value={contactNumber}
-            onValueChange={setContactNumber}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor={`addr-${profile.id}`}>Address</Label>
-          <Input
-            id={`addr-${profile.id}`}
-            value={address}
-            onValueChange={setAddress}
-          />
-        </div>
-
-        <div className="flex items-center gap-3">
-          <Button onClick={saveDetails} disabled={detailsSaving}>
-            {detailsSaving ? "Saving…" : "Save details"}
-          </Button>
-          {detailsStatus && (
-            <span
-              className={
-                detailsStatus === "Saved"
-                  ? "text-sm text-muted-foreground"
-                  : "text-sm text-destructive"
-              }
-            >
-              {detailsStatus}
-            </span>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+          <div className="flex items-center gap-3">
+            <Button onClick={saveDetails} disabled={detailsSaving}>
+              {detailsSaving ? "Saving…" : "Save details"}
+            </Button>
+            {detailsStatus && (
+              <span
+                className={
+                  detailsStatus === "Saved"
+                    ? "text-sm text-muted-foreground"
+                    : "text-sm text-destructive"
+                }
+              >
+                {detailsStatus}
+              </span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
