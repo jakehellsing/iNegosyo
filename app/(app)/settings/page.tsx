@@ -79,7 +79,7 @@ export default function SettingsPage() {
             href="/profile"
             className={cn(buttonVariants({ variant: "outline" }), "w-full")}
           >
-            Edit Profile
+            View Profile
           </Link>
         </CardContent>
       </Card>

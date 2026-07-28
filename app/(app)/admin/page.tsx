@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -16,7 +17,7 @@ import {
 } from "@/components/ui/select";
 import { useAuth } from "@/lib/auth/context";
 import { ALL_PLANS, formatDateInput, parseExpiryDate, PLAN_LABELS } from "@/lib/plans";
-import { getAllProfiles, updateUserPlan } from "@/lib/store";
+import { getAllProfiles, updateUserPlan, updateProfileDetails } from "@/lib/store";
 import { PlanTier, Profile } from "@/lib/types";
 
 export default function AdminPage() {
@@ -57,8 +58,8 @@ export default function AdminPage() {
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">User Plans</h1>
-          <p className="text-sm text-muted-foreground">Assign plans, durations, and custom limits.</p>
+          <h1 className="text-2xl font-bold tracking-tight">User Management</h1>
+          <p className="text-sm text-muted-foreground">Assign plans and edit profile details.</p>
         </div>
       </div>
 
@@ -89,6 +90,20 @@ function ProfileRow({
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
 
+  const [businessName, setBusinessName] = useState(profile.business_name ?? "");
+  const [fullName, setFullName] = useState(profile.full_name ?? "");
+  const [contactNumber, setContactNumber] = useState(profile.contact_number ?? "");
+  const [address, setAddress] = useState(profile.address ?? "");
+  const [detailsSaving, setDetailsSaving] = useState(false);
+  const [detailsStatus, setDetailsStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    setBusinessName(profile.business_name ?? "");
+    setFullName(profile.full_name ?? "");
+    setContactNumber(profile.contact_number ?? "");
+    setAddress(profile.address ?? "");
+  }, [profile]);
+
   const parse = (v: string) => (v.trim() === "" ? null : Number(v));
 
   const save = async () => {
@@ -107,6 +122,25 @@ function ProfileRow({
       setStatus(e instanceof Error ? e.message : String(e));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const saveDetails = async () => {
+    setDetailsSaving(true);
+    setDetailsStatus(null);
+    try {
+      const updated = await updateProfileDetails(profile.id, {
+        business_name: businessName.trim() || null,
+        full_name: fullName.trim() || null,
+        contact_number: contactNumber.trim() || null,
+        address: address.trim() || null,
+      });
+      onSaved(updated);
+      setDetailsStatus("Saved");
+    } catch (e) {
+      setDetailsStatus(e instanceof Error ? e.message : String(e));
+    } finally {
+      setDetailsSaving(false);
     }
   };
 
@@ -196,7 +230,7 @@ function ProfileRow({
 
         <div className="flex items-center gap-3">
           <Button onClick={save} disabled={saving}>
-            {saving ? "Saving…" : "Save"}
+            {saving ? "Saving…" : "Save plan"}
           </Button>
           {status && (
             <span
@@ -205,6 +239,60 @@ function ProfileRow({
               }
             >
               {status}
+            </span>
+          )}
+        </div>
+
+        <Separator />
+
+        <p className="text-sm font-medium">Profile details</p>
+        <div className="space-y-2">
+          <Label htmlFor={`bn-${profile.id}`}>Business Name</Label>
+          <Input
+            id={`bn-${profile.id}`}
+            value={businessName}
+            onValueChange={setBusinessName}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor={`fn-${profile.id}`}>Full Name</Label>
+          <Input
+            id={`fn-${profile.id}`}
+            value={fullName}
+            onValueChange={setFullName}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor={`cn-${profile.id}`}>Contact Number</Label>
+          <Input
+            id={`cn-${profile.id}`}
+            type="tel"
+            value={contactNumber}
+            onValueChange={setContactNumber}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor={`addr-${profile.id}`}>Address</Label>
+          <Input
+            id={`addr-${profile.id}`}
+            value={address}
+            onValueChange={setAddress}
+          />
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Button onClick={saveDetails} disabled={detailsSaving}>
+            {detailsSaving ? "Saving…" : "Save details"}
+          </Button>
+          {detailsStatus && (
+            <span
+              className={
+                detailsStatus === "Saved"
+                  ? "text-sm text-muted-foreground"
+                  : "text-sm text-destructive"
+              }
+            >
+              {detailsStatus}
             </span>
           )}
         </div>

@@ -4,7 +4,6 @@ import { createContext, ReactNode, useContext, useEffect, useRef, useState } fro
 import { useRouter } from "next/navigation";
 import { SupabaseClient, User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
-import { updateProfile as updateProfileInStore } from "@/lib/store";
 import { Profile, PlanTier } from "@/lib/types";
 import {
   effectivePlan,
@@ -33,7 +32,6 @@ interface AuthContextValue {
     password: string,
     profileData: SignUpProfileData
   ) => Promise<string | undefined>;
-  updateProfile: (update: Partial<SignUpProfileData>) => Promise<string | undefined>;
   signOut: () => Promise<void>;
 }
 
@@ -109,21 +107,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push("/login");
   };
 
-  const updateProfile = async (update: Partial<SignUpProfileData>) => {
-    if (!user) return "Not authenticated";
-    try {
-      const refreshed = await updateProfileInStore({
-        business_name: update.business_name?.trim() || null,
-        full_name: update.full_name?.trim() || null,
-        contact_number: update.contact_number?.trim() || null,
-        address: update.address?.trim() || null,
-      });
-      setProfile(refreshed);
-    } catch (e) {
-      return e instanceof Error ? e.message : String(e);
-    }
-  };
-
   const signOut = async () => {
     await getSupabase().auth.signOut();
     router.push("/login");
@@ -139,7 +122,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         signIn,
         signUp,
-        updateProfile,
         signOut,
       }}
     >

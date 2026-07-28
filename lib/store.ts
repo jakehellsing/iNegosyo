@@ -47,10 +47,10 @@ export type ProfileUpdate = Partial<
   Pick<Profile, "business_name" | "full_name" | "contact_number" | "address">
 >;
 
-export async function updateProfile(update: ProfileUpdate): Promise<Profile> {
-  const user = await currentUser();
-  if (!user) throw new Error("Not authenticated");
-
+export async function updateProfileDetails(
+  userId: string,
+  update: ProfileUpdate
+): Promise<Profile> {
   const payload: ProfileUpdate = {};
   for (const [key, value] of Object.entries(update)) {
     (payload as Record<string, unknown>)[key] =
@@ -60,7 +60,7 @@ export async function updateProfile(update: ProfileUpdate): Promise<Profile> {
   const { data, error } = await getSupabase()
     .from("profiles")
     .update(payload)
-    .eq("id", user.id)
+    .eq("id", userId)
     .select()
     .single();
   if (error) throw error;
