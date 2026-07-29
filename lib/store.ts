@@ -43,6 +43,16 @@ export async function getProfile(): Promise<Profile | null> {
   return data as Profile;
 }
 
+export async function getProfileById(userId: string): Promise<Profile | null> {
+  const { data, error } = await getSupabase()
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .single();
+  if (error) return null;
+  return data as Profile;
+}
+
 export type ProfileUpdate = Partial<
   Pick<Profile, "business_name" | "full_name" | "contact_number" | "address">
 >;
