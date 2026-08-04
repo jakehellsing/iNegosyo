@@ -198,8 +198,8 @@ function FilterTab({
 function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center rounded-xl border border-dashed p-10 text-center">
-      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-        <Search className="h-5 w-5 text-muted-foreground" />
+      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+        <Search className="h-5 w-5 text-primary" />
       </div>
       <h3 className="font-medium">No orders yet</h3>
       <p className="mb-4 text-sm text-muted-foreground">Create your first order to get started.</p>
@@ -216,7 +216,7 @@ function EmptyState() {
 function NewOrderCard() {
   return (
     <Link href="/orders/new" className="group">
-      <Card className="flex h-full min-h-[180px] flex-col items-start justify-between border-dashed bg-background py-0 transition-colors hover:bg-muted/30">
+      <Card className="flex h-full min-h-[180px] flex-col items-start justify-between border-dashed bg-card py-0 transition-colors hover:bg-muted">
         <CardContent className="flex h-full flex-col items-start justify-between p-5">
           <div>
             <p className="font-medium">Create</p>
@@ -245,8 +245,8 @@ function OrderCard({
   onDelete: (id: string) => void;
 }) {
   return (
-    <Card className="relative overflow-hidden border-none bg-gradient-to-br from-sky-50 to-white py-0 ring-1 ring-foreground/5 transition-shadow hover:shadow-md dark:from-sky-950/30 dark:to-card dark:ring-foreground/10">
-      <div className="absolute left-5 top-0 h-4 w-16 rounded-b-md bg-sky-100/80 dark:bg-sky-900/40" />
+    <Card className="relative overflow-hidden border-none bg-gradient-to-br from-primary/5 to-card py-0 ring-1 ring-foreground/5 transition-shadow hover:shadow-md dark:from-primary/10 dark:to-card dark:ring-foreground/10">
+      <div className="absolute left-5 top-0 h-4 w-16 rounded-b-md bg-primary/15 dark:bg-primary/20" />
       <CardContent className="relative p-5 pt-7">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
@@ -261,7 +261,7 @@ function OrderCard({
         <p className="mt-3 text-lg font-semibold">{formatPeso(order.total_amount)}</p>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <Badge variant="secondary" className="bg-white/70 dark:bg-background/40">
+          <Badge variant="secondary" className="bg-muted">
             {orderStatusLabels[order.order_status]}
           </Badge>
           <Badge variant={order.payment_status === "PAID" ? "default" : "outline"}>
@@ -307,7 +307,7 @@ function StatusSelect<T extends string>({
 }) {
   return (
     <Select value={value} onValueChange={(v) => v && onChange(v as T)}>
-      <SelectTrigger className="h-8 bg-white/70 text-xs dark:bg-background/40">
+      <SelectTrigger className="h-8 bg-muted text-xs">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
